@@ -1,0 +1,91 @@
+name: 'Upload build and notify BitFocus API Server'
+description: 'Upload build and notify BitFocus API Server'
+inputs:
+  source-filename:
+    description: 'File to upload'
+    required: true
+    default: ''
+  destination-filename:
+    description: 'Target filename in s3'
+    required: true
+    default: ''
+  s3-host:
+    description: 'Server endpoint'
+    required: true
+    default: 's3.bitfocus.io'
+  s3-bucket:
+    description: 'Bucket to upload to'
+    required: true
+    default: ''
+  s3-access-key:
+    description: 'Access Key'
+    required: true
+    default: ''
+  s3-secret-key:
+    description: 'Secret Key'
+    required: true
+    default: ''
+
+  api-version:
+    description: 'Version number to report to api server (eg 1.0.0+1234-abcdefg)'
+    required: true
+    default: ''
+  api-branch:
+    description: 'Name of branch to report to api server'
+    required: false
+    default: ''
+  api-product:
+    description: 'Name of the product'
+    required: true
+    default: ''
+  api-target:
+    description: 'Build target (linux-img/linux-deb/linux-tgz/mac-intel/mac-arm/win-x86/win-x64)'
+    required: true
+    default: ''
+  api-secret:
+    description: 'Secret for the api server'
+    required: true
+    default: ''
+runs:
+  using: 'composite'
+  steps:
+    - name: Download minio client
+      if: ${{ runner.os == 'Linux' }}
+      shell: bash
+      run: |
+        wget https://dl.min.io/client/mc/release/linux-amd64/mc
+        chmod +x mc
+    - name: Download minio client
+      if: ${{ runner.os == 'Windows' }}
+      shell: pwsh
+      run: |
+        Invoke-WebRequest -Uri "https://dl.minio.io/client/mc/release/windows-amd64/mc.exe" -OutFile "./mc"
+        chmod +x mc
+    - name: Download minio client
+      if: ${{ runner.os == 'macOS' }}
+      shell: bash
+      run: |
+        wget https://dl.min.io/client/mc/release/darwin-amd64/mc
+        chmod +x mc
+
+    - name: Upload file
+      shell: bash
+      run: |
+        ./mc alias set remote/ https://${{ inputs.s3-host }} ${{ inputs.s3-access-key }} ${{ inputs.s3-secret-key }}
+
+        ./mc cp "${{ inputs.source-filename }}" "remote/${{ inputs.s3-bucket }}/${{ inputs.destination-filename }}"
+
+    - name: Notify API Server
+      shell: bash
+      run: |
+        curl -X 'POST' \
+          'https://api.bitfocus.io/v1/product/${{ inputs.api-product }}/package' \
+          -H 'accept: application/json' \
+          -H 'Content-Type: application/json' \
+          -d '{
+          "branch": "${{ inputs.api-branch }}",
+          "version": "${{ inputs.api-version }}",
+          "target": "${{ inputs.api-target }}",
+          "filename": "${{ inputs.destination-filename }}",
+          "secret": "${{ inputs.api-secret }}"
+        }'

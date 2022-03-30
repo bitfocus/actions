@@ -80,45 +80,19 @@ runs:
            echo "not uploading"
          fi
 
-    - name: Download minio client
-      if: ${{ runner.os == 'Linux' && steps.versions.outputs.version && steps.versions.outputs.branch }}
-      shell: bash
-      run: |
-        wget https://dl.min.io/client/mc/release/linux-amd64/mc
-        chmod +x mc
-    - name: Download minio client
-      if: ${{ runner.os == 'Windows' && steps.versions.outputs.version && steps.versions.outputs.branch }}
-      shell: pwsh
-      run: |
-        Invoke-WebRequest -Uri "https://dl.minio.io/client/mc/release/windows-amd64/mc.exe" -OutFile "./mc"
-        chmod +x mc
-    - name: Download minio client
-      if: ${{ runner.os == 'macOS' && steps.versions.outputs.version && steps.versions.outputs.branch }}
-      shell: bash
-      run: |
-        wget https://dl.min.io/client/mc/release/darwin-amd64/mc
-        chmod +x mc
-
-    - name: Upload file
+    - name: Upload and Notify API Server
       if: ${{ steps.versions.outputs.version && steps.versions.outputs.branch }}
-      shell: bash
-      run: |
-        ./mc alias set remote/ https://${{ inputs.s3-host }} ${{ inputs.s3-access-key }} ${{ inputs.s3-secret-key }}
+      uses: ./upload-and-notify-for-branch
+      with:
+        source-filename: ${{ inputs.source-filename }}
+        destination-filename: ${{ inputs.destination-filename }}
+        s3-host: ${{ inputs.s3-host }}
+        s3-bucket: ${{ inputs.s3-bucket }}
+        s3-access-key: ${{ inputs.s3-access-key }}
+        s3-secret-key: ${{ inputs.s3-secret-key }}
 
-        ./mc cp "${{ inputs.source-filename }}" "remote/${{ inputs.s3-bucket }}/${{ inputs.destination-filename }}"
-
-    - name: Notify API Server
-      if: ${{ steps.versions.outputs.version && steps.versions.outputs.branch }}
-      shell: bash
-      run: |
-        curl -X 'POST' \
-          'https://api.bitfocus.io/v1/product/${{ inputs.api-product }}/package' \
-          -H 'accept: application/json' \
-          -H 'Content-Type: application/json' \
-          -d '{
-          "branch": "${{ steps.versions.outputs.branch }}",
-          "version": "${{ steps.versions.outputs.version }}",
-          "target": "${{ inputs.api-target }}",
-          "filename": "${{ inputs.destination-filename }}",
-          "secret": "${{ inputs.api-secret }}"
-        }'
+        api-version: ${{  steps.versions.outputs.version }}
+        api-branch: ${{ steps.versions.outputs.branch }}
+        api-product: ${{ inputs.api-product }}
+        api-target: ${{ inputs.api-target }}
+        api-secret: ${{ inputs.api-secret }}
