@@ -82,7 +82,7 @@ runs:
 
     - name: Upload and Notify API Server
       if: ${{ steps.versions.outputs.version && steps.versions.outputs.branch }}
-      uses: ./upload-and-notify-for-branch
+      uses: bitfocus/actions/upload-and-notify-for-branch@main
       with:
         source-filename: ${{ inputs.source-filename }}
         destination-filename: ${{ inputs.destination-filename }}
