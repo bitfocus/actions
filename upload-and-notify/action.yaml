@@ -62,20 +62,20 @@ runs:
          then
            VERSION="${{ github.ref_name }}"
            echo "stable release ${VERSION}"
-           echo ::set-output name=branch::"stable"
-           echo ::set-output name=version::"${VERSION}"
+           echo "branch=stable" >> $GITHUB_OUTPUT
+           echo "version=${VERSION}" >> $GITHUB_OUTPUT
          elif [[ "${{ github.ref }}" == refs/heads/* && "${{ github.ref_name }}" == "${{ inputs.beta-branch }}" ]]
          then
            VERSION="${{ inputs.long-version }}"
            echo "beta build ${VERSION}"
-           echo ::set-output name=branch::"beta"
-           echo ::set-output name=version::"${VERSION}"
+           echo "branch=beta" >> $GITHUB_OUTPUT
+           echo "version=${VERSION}" >> $GITHUB_OUTPUT
          elif [[ "${{ github.ref }}" == refs/heads/* && "${{ github.ref_name }}" == "${{ inputs.dev-branch }}" ]]
          then
            VERSION="${{ inputs.long-version }}"
            echo "dev build ${VERSION}"
-           echo ::set-output name=branch::"experimental"
-           echo ::set-output name=version::"${VERSION}"
+           echo "branch=experimental" >> $GITHUB_OUTPUT
+           echo "version=${VERSION}" >> $GITHUB_OUTPUT
          else
            echo "not uploading"
          fi
