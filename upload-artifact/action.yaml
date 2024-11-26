@@ -44,7 +44,7 @@ runs:
         chmod +x mc
     - name: Download minio client
       if: ${{ runner.os == 'Windows' }}
-      shell: pwsh
+      shell: powershell
       run: |
         choco install git -y
         $ProgressPreference = 'SilentlyContinue'
