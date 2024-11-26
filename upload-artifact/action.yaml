@@ -1,0 +1,64 @@
+name: Upload artifact to BF S3
+description: Uploads the artifact to the BF S3 server
+inputs:
+  
+  artifact:
+    description: 'The artifact to upload'
+    required: true
+  artifact-filename:
+    description: 'Target filename in s3'
+    required: true
+    default: ''
+  s3-host:
+    description: 'Server endpoint'
+    required: true
+    default: 's3.bitfocus.io'
+  s3-bucket:
+    description: 'Bucket to upload to'
+    required: true
+    default: ''
+  s3-access-key:
+    description: 'Access Key'
+    required: true
+    default: ''
+  s3-secret-key:
+    description: 'Secret Key'
+    required: true
+    default: ''
+  run-id:
+    description: 'The job id'
+    required: true
+outputs:
+  artifact-url:
+    description: "URL to artifact"
+    value: ${{ steps.upload.outputs.artifact-url }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Download minio client
+      if: ${{ runner.os == 'Linux' }}
+      shell: bash
+      run: |
+        wget -q https://dl.min.io/client/mc/release/linux-amd64/mc
+        chmod +x mc
+    - name: Download minio client
+      if: ${{ runner.os == 'Windows' }}
+      shell: pwsh
+      run: |
+        choco install git -y
+        $ProgressPreference = 'SilentlyContinue'
+        Invoke-WebRequest -Uri "https://dl.minio.io/client/mc/release/windows-amd64/mc.exe" -OutFile "./mc"
+        chmod +x mc
+    - name: Download minio client
+      if: ${{ runner.os == 'macOS' }}
+      shell: bash
+      run: |
+        wget -q https://dl.min.io/client/mc/release/darwin-amd64/mc
+        chmod +x mc
+    - name: Upload
+      id: upload
+      shell: bash
+      run: |
+        ./mc alias set remote/ https://${{ inputs.s3-host }} ${{ inputs.s3-access-key }} ${{ inputs.s3-secret-key }}
+        ./mc cp "${{ inputs.artifact }}" "remote/${{ inputs.s3-bucket }}/${{ inputs.run-id }}/${{ inputs.artifact-filename }}"
