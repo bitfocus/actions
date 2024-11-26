@@ -46,7 +46,6 @@ runs:
       if: ${{ runner.os == 'Windows' }}
       shell: pwsh
       run: |
-        choco install git -y
         $ProgressPreference = 'SilentlyContinue'
         Invoke-WebRequest -Uri "https://dl.minio.io/client/mc/release/windows-amd64/mc.exe" -OutFile "./mc"
     - name: Download minio client
