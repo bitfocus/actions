@@ -35,8 +35,6 @@ outputs:
 
 runs:
   using: 'composite'
-  env:
-    HOME: ${{ github.workspace }} # fixes issue with git bash in windows
   steps:
     - name: Download minio client
       if: ${{ runner.os == 'Linux' }}
