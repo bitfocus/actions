@@ -58,6 +58,7 @@ runs:
       id: upload
       shell: bash
       run: |
+        cd ${GITHUB_WORKSPACE:-.}
         ./mc alias set remote/ https://${{ inputs.s3-host }} ${{ inputs.s3-access-key }} ${{ inputs.s3-secret-key }}
         ./mc cp "${{ inputs.artifact }}" "remote/${{ inputs.s3-bucket }}/${{ inputs.run-id }}/${{ inputs.artifact-filename }}"
         echo "artifact-url=https://${{ inputs.s3-host }}/${{ inputs.s3-bucket }}/${{ inputs.run-id }}/${{ inputs.artifact-filename }}" >> $GITHUB_OUTPUT
