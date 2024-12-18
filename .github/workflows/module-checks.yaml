@@ -13,6 +13,16 @@ on:
         description: 'Upload the package as an artifact'
         required: false
         default: false
+      git-ref:
+        type: string
+        description: 'The git ref to checkout (if not set uses the current)'
+        required: false
+        default: ''
+      git-sha-check:
+        type: string
+        description: 'If set, ensure the git sha matches this value'
+        required: false
+        default: ''
     outputs:
       package-file:
         description: "Filename of the produced package"
@@ -37,6 +47,17 @@ jobs:
           repository: ${{ inputs.repository-name }}
           persist-credentials: false
           token: ${{ secrets.GITHUB_TOKEN }}
+          ref: ${{ inputs.git-ref }}
+
+      - name: Check module hash
+        if: ${{ inputs.git-sha-check }}
+        run: |
+          GIT_HASH=$(git rev-parse HEAD)
+          echo "Git sha: $GIT_HASH"
+          if [ ! "$GIT_HASH" == "${{ inputs.git-sha-check }}" ]; then
+            echo "Git sha does not match requested ref"
+            exit 99
+          fi
 
       - name: Determine nodejs version
         id: determine-nodejs
