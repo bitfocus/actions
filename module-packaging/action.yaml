@@ -20,6 +20,7 @@ runs:
   steps:
     - name: Determine nodejs version
       id: determine-nodejs
+      shell: bash
       run: |
         NODE_VERSION=$(jq '.runtime.type' ${{ inputs.directory }}/companion/manifest.json)
         echo "Node.js version: $NODE_VERSION"
@@ -38,10 +39,12 @@ runs:
         node-version: ${{ steps.determine-nodejs.outputs.version }}
         
     - name: Enable corepack
+      shell: bash
       run: |
         corepack enable
 
     - name: Collect info
+      shell: bash
       run: |
         cd ${{ inputs.directory }}
 
@@ -62,6 +65,8 @@ runs:
         fi
 
     - name: Setup Github packages auth
+      if: ${{ inputs.github-token }}
+      shell: bash
       run: |
         # TODO: support yarn3 with something like (needs a syntax check)
         # yarn config set npmRegistries.//npm.pkg.github.com.npmAuthToken $NPM_AUTH_TOKEN
@@ -69,6 +74,7 @@ runs:
         echo "//npm.pkg.github.com/:_authToken=${{ inputs.github-token }}" >> ~/.npmrc
 
     - name: Prepare module
+      shell: bash
       run: |
         cd ${{ inputs.directory }}
 
@@ -79,6 +85,7 @@ runs:
 
     - name: Package module
       id: package
+      shell: bash
       run: |
         cd ${{ inputs.directory }}
 
