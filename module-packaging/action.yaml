@@ -1,0 +1,87 @@
+name: Package Module
+description: Performs the packaging of a Companion Module
+inputs:
+  module-name: # TODO - can this be inferred from the repository name?
+    description: 'The name of the module'
+    required: true
+  directory:
+    description: 'The directory of the module'
+    required: true
+  github-token:
+    description: 'Github token for authenticating with Github packages'
+    required: false
+outputs:
+  package-file:
+    description: "Filename of the produced package"
+    value: ${{ steps.package.outputs.filename }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Determine nodejs version
+      id: determine-nodejs
+      run: |
+        NODE_VERSION=$(jq '.runtime.type' ${{ inputs.directory }}/companion/manifest.json)
+        echo "Node.js version: $NODE_VERSION"
+
+        if [ "$NODE_VERSION" == "\"node18\"" ]; then
+          echo "Using Node.js 18.x"
+          echo "version=18.x" >> $GITHUB_OUTPUT
+        elif [ "$NODE_VERSION" == "\"node22\"" ]; then
+          echo "Using Node.js 22.x"
+          echo "version=22.x" >> $GITHUB_OUTPUT
+        fi
+        
+    - name: Use Node.js ${{ steps.determine-nodejs.outputs.version }}
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ steps.determine-nodejs.outputs.version }}
+        
+    - name: Enable corepack
+      run: |
+        corepack enable
+
+    - name: Collect info
+      run: |
+        cd ${{ inputs.directory }}
+
+        MANIFEST_ID=$(jq '.["id"]' companion/manifest.json)
+        if [ ! "$MANIFEST_ID" == "\"${{ inputs.module-name }}\"" ]; then
+          echo "Module manifest.json id does not match github repository name"
+          exit 99
+        fi
+
+        if grep -q "companion-module-your-module-name" "companion/manifest.json"; then
+          echo "Module manifest contains references to companion-module-your-module-name!"
+          exit 99
+        fi
+
+        if ! jq -e '.products | arrays and length > 0' companion/manifest.json > /dev/null; then
+          echo "Module manifest product list is either empty or does not exist"
+          exit 99
+        fi
+
+    - name: Setup Github packages auth
+      run: |
+        # TODO: support yarn3 with something like (needs a syntax check)
+        # yarn config set npmRegistries.//npm.pkg.github.com.npmAuthToken $NPM_AUTH_TOKEN
+
+        echo "//npm.pkg.github.com/:_authToken=${{ inputs.github-token }}" >> ~/.npmrc
+
+    - name: Prepare module
+      run: |
+        cd ${{ inputs.directory }}
+
+        yarn install
+
+        # yarn build would be better, but lacks the --if-present property
+        npm run build --if-present
+
+    - name: Package module
+      id: package
+      run: |
+        cd ${{ inputs.directory }}
+
+        yarn companion-module-build
+
+        echo "filename=$PWD/pkg.tgz" >> $GITHUB_OUTPUT
