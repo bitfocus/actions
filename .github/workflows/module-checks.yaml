@@ -7,10 +7,6 @@ on:
         type: string
         description: 'The name of the module or the repository'
         required: true
-    secrets:
-      github-token:
-        description: 'Github token for authenticating with Github packages'
-        required: false
     outputs:
       package-file:
         description: "Filename of the produced package"
@@ -85,7 +81,7 @@ jobs:
           # TODO: support yarn3 with something like (needs a syntax check)
           # yarn config set npmRegistries.//npm.pkg.github.com.npmAuthToken $NPM_AUTH_TOKEN
 
-          echo "//npm.pkg.github.com/:_authToken=${{ secrets.github-token }}" >> ~/.npmrc
+          echo "//npm.pkg.github.com/:_authToken=${{ github.token }}" >> ~/.npmrc
 
       - name: Prepare module
         shell: bash
