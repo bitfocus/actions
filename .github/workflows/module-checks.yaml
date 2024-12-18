@@ -7,6 +7,11 @@ on:
         type: string
         description: 'The name of the module or the repository'
         required: true
+      upload-artifact:
+        type: boolean
+        description: 'Upload the package as an artifact'
+        required: false
+        default: false
     outputs:
       package-file:
         description: "Filename of the produced package"
@@ -97,4 +102,8 @@ jobs:
         run: |
           yarn companion-module-build
 
-          echo "filename=$PWD/pkg.tgz" >> $GITHUB_OUTPUT
+      - name: Upload artifact
+        if: ${{ inputs.upload-artifact }}
+        uses: actions/upload-artifact@v4
+        with:
+          path: "pkg.tgz"
