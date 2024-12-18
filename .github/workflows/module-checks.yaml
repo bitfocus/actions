@@ -112,4 +112,5 @@ jobs:
         if: ${{ inputs.upload-artifact }}
         uses: actions/upload-artifact@v4
         with:
+          name: pkg
           path: "pkg.tgz"
