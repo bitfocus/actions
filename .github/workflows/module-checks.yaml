@@ -67,7 +67,8 @@ jobs:
         shell: bash
         run: |
           MODULE_NAME="${{ inputs.repository-name }}"
-          # TODO - sanitise this value
+          MODULE_NAME=$(basename $MODULE_NAME) # remove the owner from the repository name
+          MODULE_NAME=${MODULE_NAME#companion-module-} # remove the companion-module- prefix
 
           MANIFEST_ID=$(jq '.["id"]' companion/manifest.json)
           if [ ! "$MANIFEST_ID" == "\"${MODULE_NAME}\"" ]; then
