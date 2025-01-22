@@ -78,6 +78,9 @@ runs:
     - name: Notify API Server
       shell: bash
       run: |
+        SHA512=$(openssl dgst -sha512 -binary "${{ inputs.source-filename }}" | base64 -w 0)
+        SIZE=$(./mc stat "${{ inputs.source-filename }}" --json | jq .size)
+
         curl -X 'POST' \
           'https://api.bitfocus.io/v1/product/${{ inputs.api-product }}/package' \
           -H 'accept: application/json' \
@@ -87,5 +90,7 @@ runs:
           "version": "${{ inputs.api-version }}",
           "target": "${{ inputs.api-target }}",
           "filename": "${{ inputs.destination-filename }}",
+          "filesize": "${SIZE}",
+          "filesha512": "${SHA512}",
           "secret": "${{ inputs.api-secret }}"
         }'
