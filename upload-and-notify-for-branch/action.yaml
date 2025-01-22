@@ -78,7 +78,9 @@ runs:
     - name: Notify API Server
       shell: bash
       run: |
+        # This seems like the most portable way we can do this
         SHA512=$(openssl dgst -sha512 -binary "${{ inputs.source-filename }}" | base64 -w 0)
+        # Use minio and jq for this as we know both will be available
         SIZE=$(./mc stat "${{ inputs.source-filename }}" --json | jq .size)
 
         curl -X 'POST' \
