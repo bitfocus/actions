@@ -97,7 +97,7 @@ runs:
           "version": "${{ inputs.api-version }}",
           "target": "${{ inputs.api-target }}",
           "filename": "${{ inputs.destination-filename }}",
-          "filesize": "${SIZE}",
-          "filesha512": "${SHA512}",
+          "filesize": "'${SIZE}'",
+          "filesha512": "'${SHA512}'",
           "secret": "${{ inputs.api-secret }}"
         }'
