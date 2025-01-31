@@ -120,8 +120,10 @@ jobs:
         run: |
           yarn install
 
-          # yarn build would be better, but lacks the --if-present property
-          npm run build --if-present
+          # Some modules have a build script, but many do not
+          if jq -e '.scripts.build' package.json > /dev/null; then 
+            yarn run build
+          fi
 
       - name: Package module
         id: package
