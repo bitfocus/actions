@@ -104,8 +104,8 @@ jobs:
 
           if [ ! -z "${{ inputs.git-ref }}" ]; then
             # TODO - consider building a tag in a module repository?
-            MANIFEST_VERSION=$(jq '.["version"]' companion/manifest.json)
-            if [ ! "v$MANIFEST_VERSION" == "\"${{ inputs.git-ref }}\"" ]; then
+            PACKAGE_VERSION=$(jq '.["version"]' package.json)
+            if [ ! "v$PACKAGE_VERSION" == "\"${{ inputs.git-ref }}\"" ]; then
               echo "Module manifest.json version does not match git ref"
               exit 99
             fi
