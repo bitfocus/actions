@@ -53,13 +53,13 @@ runs:
       if: ${{ runner.os == 'Linux' && runner.arch == 'X64' }}
       shell: bash
       run: |
-        wget https://dl.min.io/client/mc/release/linux-amd64/mc
+        wget -q https://dl.min.io/client/mc/release/linux-amd64/mc
         chmod +x mc
     - name: Download minio client
       if: ${{ runner.os == 'Linux' && runner.arch == 'ARM64' }}
       shell: bash
       run: |
-        wget https://dl.min.io/client/mc/release/linux-arm64/mc
+        wget -q https://dl.min.io/client/mc/release/linux-arm64/mc
         chmod +x mc
     - name: Download minio client
       if: ${{ runner.os == 'Windows' }}
@@ -71,7 +71,7 @@ runs:
       if: ${{ runner.os == 'macOS' }}
       shell: bash
       run: |
-        wget https://dl.min.io/client/mc/release/darwin-amd64/mc
+        wget -q https://dl.min.io/client/mc/release/darwin-amd64/mc
         chmod +x mc
 
     - name: Upload file
