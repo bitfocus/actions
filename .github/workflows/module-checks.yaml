@@ -157,7 +157,7 @@ jobs:
             EXTRA_ARGS="--prerelease"
           fi
 
-          yarn companion-module-build $EXTRA_ARGS
+          yarn companion-module-build --output=pkg $EXTRA_ARGS
 
       - name: Upload artifact
         if: ${{ inputs.upload-artifact }}
