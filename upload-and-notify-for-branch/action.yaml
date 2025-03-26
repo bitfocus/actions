@@ -105,5 +105,6 @@ runs:
           "filename": "${{ inputs.destination-filename }}",
           "filesize": "'${SIZE}'",
           "filesha512": "'${SHA512}'",
+          "url": "https://${{ inputs.s3-host }}/${{ inputs.s3-bucket }}/${{ inputs.destination-filename }}",
           "secret": "${{ inputs.api-secret }}"
         }'
