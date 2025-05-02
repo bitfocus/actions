@@ -114,7 +114,7 @@ jobs:
           if [ "$IS_BUILDING_VERSION" != "" ]; then
             PACKAGE_VERSION=$(jq '.["version"]' package.json)
             PACKAGE_VERSION_V=$(jq '"v"+ .["version"]' package.json)
-            if [ ! "$PACKAGE_VERSION_V" == "\"${{ inputs.git-ref }}\"" ] && [ ! "$PACKAGE_VERSION" == "\"${{ inputs.git-ref }}\"" ]; then
+            if [ ! "$PACKAGE_VERSION_V" == "${IS_BUILDING_VERSION}" ] && [ ! "$PACKAGE_VERSION" == "${IS_BUILDING_VERSION}" ]; then
               echo "Module package.json version does not match git ref"
               exit 99
             fi
