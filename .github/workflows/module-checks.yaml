@@ -102,8 +102,16 @@ jobs:
             exit 99
           fi
 
+          IS_BUILDING_VERSION=""
           if [ ! -z "${{ inputs.git-ref }}" ]; then
-            # TODO - consider building a tag in a module repository?
+            # is building a proper version, use the ref that was requested
+            IS_BUILDING_VERSION="\"${{ inputs.git-ref }}\""
+          elif [[ "${{ github.event.inputs.git-ref }}" == refs/tags/* ]]; then 
+            IS_BUILDING_VERSION="${{ github.event.inputs.git-ref }}"
+            IS_BUILDING_VERSION="\"${IS_BUILDING_VERSION#refs/tags/}\""
+          fi
+
+          if [ "$IS_BUILDING_VERSION" != "" ]; then
             PACKAGE_VERSION=$(jq '.["version"]' package.json)
             PACKAGE_VERSION_V=$(jq '"v"+ .["version"]' package.json)
             if [ ! "$PACKAGE_VERSION_V" == "\"${{ inputs.git-ref }}\"" ] && [ ! "$PACKAGE_VERSION" == "\"${{ inputs.git-ref }}\"" ]; then
