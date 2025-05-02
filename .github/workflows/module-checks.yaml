@@ -106,8 +106,8 @@ jobs:
           if [ ! -z "${{ inputs.git-ref }}" ]; then
             # is building a proper version, use the ref that was requested
             IS_BUILDING_VERSION="\"${{ inputs.git-ref }}\""
-          elif [[ "${{ github.event.inputs.git-ref }}" == refs/tags/* ]]; then 
-            IS_BUILDING_VERSION="${{ github.event.inputs.git-ref }}"
+          elif [[ "${{ github.ref }}" == refs/tags/* ]]; then 
+            IS_BUILDING_VERSION="${{ github.ref }}"
             IS_BUILDING_VERSION="\"${IS_BUILDING_VERSION#refs/tags/}\""
           fi
 
