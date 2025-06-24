@@ -1,11 +1,11 @@
-name: Upload artifact to BF S3
-description: Uploads the artifact to the BF S3 server with a unique path based on the run ID.
+# Most actions on github are either docker actions, or only for linux.
+name: Upload BF S3
+description: Uploads the file to the BF S3 server
 inputs:
-  
-  artifact:
-    description: 'The artifact to upload'
+  file:
+    description: 'The file to upload'
     required: true
-  artifact-filename:
+  destination-filename:
     description: 'Target filename in s3'
     required: true
     default: ''
@@ -29,9 +29,9 @@ inputs:
     description: 'The job id'
     required: true
 outputs:
-  artifact-url:
-    description: "URL to artifact"
-    value: ${{ steps.upload.outputs.artifact-url }}
+  url:
+    description: "URL to uploaded file"
+    value: ${{ steps.upload.outputs.url }}
 
 runs:
   using: 'composite'
@@ -58,8 +58,8 @@ runs:
       id: upload
       shell: bash
       run: |
+        echo Upload file to https://${{ inputs.s3-host }}/${{ inputs.s3-bucket }}${{ inputs.destination-filename }}
         export HOME="$(pwd)" MC_CONFIG_DIR="$(pwd)"
         ./mc alias set remote/ https://${{ inputs.s3-host }} ${{ inputs.s3-access-key }} ${{ inputs.s3-secret-key }}
-        ./mc cp "${{ inputs.artifact }}" "remote/${{ inputs.s3-bucket }}/${{ inputs.run-id }}/${{ inputs.artifact-filename }}"
-        echo "artifact-url=https://${{ inputs.s3-host }}/${{ inputs.s3-bucket }}/${{ inputs.run-id }}/${{ inputs.artifact-filename }}" >> $GITHUB_OUTPUT
-        echo "Uploaded artifact to https://${{ inputs.s3-host }}/${{ inputs.s3-bucket }}/${{ inputs.run-id }}/${{ inputs.artifact-filename }}"
+        ./mc cp "${{ inputs.file }}" "remote/${{ inputs.s3-bucket }}/${{ inputs.destination-filename }}"
+        echo "url=https://${{ inputs.s3-host }}/${{ inputs.s3-bucket }}/${{ inputs.destination-filename }}" >> $GITHUB_OUTPUT

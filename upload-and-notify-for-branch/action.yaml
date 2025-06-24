@@ -12,7 +12,7 @@ inputs:
   s3-host:
     description: 'Server endpoint'
     required: true
-    default: 's3.bitfocus.io'
+    default: 's4.bitfocus.io'
   s3-bucket:
     description: 'Bucket to upload to'
     required: true
