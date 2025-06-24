@@ -2,7 +2,7 @@
 name: Upload BF S3
 description: Uploads the file to the BF S3 server
 inputs:
-  file:
+  filename:
     description: 'The file to upload'
     required: true
   destination-filename:
@@ -61,5 +61,5 @@ runs:
         echo Upload file to https://${{ inputs.s3-host }}/${{ inputs.s3-bucket }}${{ inputs.destination-filename }}
         export HOME="$(pwd)" MC_CONFIG_DIR="$(pwd)"
         ./mc alias set remote/ https://${{ inputs.s3-host }} ${{ inputs.s3-access-key }} ${{ inputs.s3-secret-key }}
-        ./mc cp "${{ inputs.file }}" "remote/${{ inputs.s3-bucket }}/${{ inputs.destination-filename }}"
+        ./mc cp "${{ inputs.filename }}" "remote/${{ inputs.s3-bucket }}/${{ inputs.destination-filename }}"
         echo "url=https://${{ inputs.s3-host }}/${{ inputs.s3-bucket }}/${{ inputs.destination-filename }}" >> $GITHUB_OUTPUT
