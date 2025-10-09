@@ -138,6 +138,11 @@ jobs:
             fi
           fi
 
+          if [ ! -f companion/HELP.md ]; then
+            echo "Module help file companion/HELP.md does not exist"
+            exit 99
+          fi
+
       - name: Setup Github packages auth
         shell: bash
         run: |
