@@ -91,10 +91,26 @@ jobs:
 
       - name: Collect info
         shell: bash
+        id: collect-info
         run: |
           MODULE_NAME="${{ inputs.repository-name }}"
           MODULE_NAME=$(basename $MODULE_NAME) # remove the owner from the repository name
+
+          # determine the type, to be either connection (module) or surface
+          if [[ "$MODULE_NAME" == companion-module-* ]]; then
+            MODULE_TYPE="module"
+          elif [[ "$MODULE_NAME" == companion-surface-* ]]; then
+            MODULE_TYPE="surface"
+          else
+            echo "Unknown repository name format: $MODULE_NAME. Repository name must start with companion-module- or companion-surface-"
+            exit 99
+          fi
+
           MODULE_NAME=${MODULE_NAME#companion-module-} # remove the companion-module- prefix
+          MODULE_NAME=${MODULE_NAME#companion-surface-} # remove the companion-surface- prefix
+
+          echo "module-name=$MODULE_NAME" >> $GITHUB_OUTPUT
+          echo "module-type=$MODULE_TYPE" >> $GITHUB_OUTPUT
 
           MANIFEST_ID=$(jq '.["id"]' companion/manifest.json)
           if [ ! "$MANIFEST_ID" == "\"${MODULE_NAME}\"" ]; then
@@ -120,8 +136,8 @@ jobs:
             fi
           fi
 
-          if grep -q "companion-module-your-module-name" "companion/manifest.json"; then
-            echo "Module manifest contains references to companion-module-your-module-name!"
+          if grep -q "your-module-name" "companion/manifest.json"; then
+            echo "Module manifest contains references to your-module-name!"
             exit 99
           fi
 
@@ -130,7 +146,7 @@ jobs:
             exit 99
           fi
 
-          if [[ "{{ github.repository }}" == companion-module-* ]]; then
+          if [[ "{{ github.repository }}" == companion-module-* ]] || [[ "{{ github.repository }}" == companion-surface-* ]]; then
             # only run this check when in modules
             if ! jq -e '.runtime.apiVersion === "0.0.0"' companion/manifest.json > /dev/null; then
               echo "Module manifest should have default 0.0.0 runtime.apiVersion"
@@ -171,7 +187,15 @@ jobs:
             EXTRA_ARGS="--prerelease"
           fi
 
-          yarn companion-module-build --output=pkg $EXTRA_ARGS
+          if [ "${{ steps.collect-info.outputs.module-type }}" == "surface" ]; then
+            echo "not implemented yet!"
+            exit 99
+          elif [ "${{ steps.collect-info.outputs.module-type }}" == "module" ]; then
+            yarn companion-module-build --output=pkg $EXTRA_ARGS
+          else
+            echo "Unknown module type '${{ steps.collect-info.outputs.module-type }}'"
+            exit 99
+          fi
 
       - name: Upload artifact
         if: ${{ inputs.upload-artifact }}
