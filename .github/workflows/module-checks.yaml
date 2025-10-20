@@ -188,8 +188,7 @@ jobs:
           fi
 
           if [ "${{ steps.collect-info.outputs.module-type }}" == "surface" ]; then
-            echo "not implemented yet!"
-            exit 99
+            yarn companion-surface-build --output=pkg $EXTRA_ARGS
           elif [ "${{ steps.collect-info.outputs.module-type }}" == "module" ]; then
             yarn companion-module-build --output=pkg $EXTRA_ARGS
           else
