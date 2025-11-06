@@ -206,9 +206,10 @@ jobs:
       - name: Check module launches
         shell: bash
         timeout-minutes: 1
+        # This isn't a nice check, and doesn't give a clean output, but hopefully this is enough to catch some issues
+        # note: this must be done after the artifact upload, to ensure it doesn't accidentally mangle the package
         run: |
-          # note: this must be done after the artifact upload, to ensure it doesn't accidentally mangle the package
-          # This isn't a nice check, and doesn't give a clean output, but hopefully this is enough to catch some issues
+          set +e # disable errexit so we can capture node's non-zero exit without aborting the step
 
           RESULT=$(node pkg/main.js 2>&1)
           CODE=$?
