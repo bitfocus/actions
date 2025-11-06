@@ -202,3 +202,23 @@ jobs:
         with:
           name: pkg
           path: "pkg.tgz"
+
+      - name: Check module launches
+        shell: bash
+        timeout-minutes: 1
+        run: |
+          # note: this must be done after the artifact upload, to ensure it doesn't accidentally mangle the package
+          # This isn't a nice check, and doesn't give a clean output, but hopefully this is enough to catch some issues
+
+          RESULT=$(node pkg/main.js 2>&1)
+          CODE=$?
+          if [ $CODE -eq 0 ]; then
+            echo "Module launched successfully"
+          elif echo "$RESULT" | grep -q "Failed to startup module"; then
+            # This means it is a connection, and the entrypoint was the cause of the exit
+            echo "Module launched successfully"
+          else
+            echo "Module failed to launch:"
+            echo "$RESULT"
+            exit 99
+          fi
