@@ -163,11 +163,11 @@ jobs:
         shell: bash
         run: |
           # For npm/yarn classic
-          echo "//npm.pkg.github.com/:_authToken=${{ github.token }}" >> ~/.npmrc
+          echo "//npm.pkg.github.com/:_authToken=${{ secrets.GITHUB_TOKEN }}" >> ~/.npmrc
 
           # For Yarn Berry (3+)
           if yarn --version 2>/dev/null | grep -qE '^[3-9]\.'; then
-            yarn config set 'npmRegistries["//npm.pkg.github.com"].npmAuthToken' "${{ github.token }}"
+            yarn config set 'npmRegistries["//npm.pkg.github.com"].npmAuthToken' "${{ secrets.GITHUB_TOKEN }}"
           fi
 
       - name: Prepare module
