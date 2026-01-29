@@ -54,6 +54,7 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           ref: ${{ inputs.git-ref }}
 
+
       - name: Check module hash
         if: ${{ inputs.git-sha-check }}
         run: |
@@ -88,6 +89,14 @@ jobs:
         shell: bash
         run: |
           corepack enable
+
+      - name: Check for incorrect lockfiles
+        shell: bash
+        run: |
+          if [ -f package-lock.json ]; then
+            echo "Error: package-lock.json file found. This repository should use yarn, not npm."
+            exit 1
+          fi
 
       - name: Collect info
         shell: bash
