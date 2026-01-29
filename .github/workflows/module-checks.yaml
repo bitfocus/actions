@@ -54,7 +54,6 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           ref: ${{ inputs.git-ref }}
 
-
       - name: Check module hash
         if: ${{ inputs.git-sha-check }}
         run: |
@@ -95,6 +94,10 @@ jobs:
         run: |
           if [ -f package-lock.json ]; then
             echo "Error: package-lock.json file found. This repository should use yarn, not npm."
+            exit 1
+          fi
+          if [ ! -f yarn.lock ]; then
+            echo "Error: yarn.lock file not found. This repository must use yarn."
             exit 1
           fi
 
