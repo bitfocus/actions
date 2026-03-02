@@ -226,7 +226,14 @@ jobs:
         run: |
           set +e # disable errexit so we can capture node's non-zero exit without aborting the step
 
-          RESULT=$(node pkg/main.js 2>&1)
+          MODULE_NAME="${{ steps.collect-info.outputs.module-name }}"
+          if [ -f "pkg/${MODULE_NAME}/main.js" ]; then
+            MAIN_JS="pkg/${MODULE_NAME}/main.js"
+          else
+            MAIN_JS="pkg/main.js"
+          fi
+
+          RESULT=$(node "$MAIN_JS" 2>&1)
           CODE=$?
           if [ $CODE -eq 0 ]; then
             echo "Module launched successfully"
