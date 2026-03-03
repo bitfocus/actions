@@ -1,78 +1,56 @@
-name: 'Upload build and notify BitFocus API Server'
-description: 'Upload build and notify BitFocus API Server'
+name: "Upload build and notify BitFocus API Server"
+description: "Upload build and notify BitFocus API Server"
 inputs:
   source-filename:
-    description: 'File to upload'
+    description: "File to upload"
     required: true
-    default: ''
+    default: ""
   destination-filename:
-    description: 'Target filename in s3'
+    description: "Target filename in s3"
     required: true
-    default: ''
+    default: ""
   s3-host:
-    description: 'Server endpoint'
+    description: "Server endpoint"
     required: true
-    default: 's4.bitfocus.io'
+    default: "s4.bitfocus.io"
   s3-bucket:
-    description: 'Bucket to upload to'
+    description: "Bucket to upload to"
     required: true
-    default: ''
+    default: ""
   s3-access-key:
-    description: 'Access Key'
+    description: "Access Key"
     required: true
-    default: ''
+    default: ""
   s3-secret-key:
-    description: 'Secret Key'
+    description: "Secret Key"
     required: true
-    default: ''
+    default: ""
 
   api-version:
-    description: 'Version number to report to api server (eg 1.0.0+1234-abcdefg)'
+    description: "Version number to report to api server (eg 1.0.0+1234-abcdefg)"
     required: true
-    default: ''
+    default: ""
   api-branch:
-    description: 'Name of branch to report to api server'
+    description: "Name of branch to report to api server"
     required: false
-    default: ''
+    default: ""
   api-product:
-    description: 'Name of the product'
+    description: "Name of the product"
     required: true
-    default: ''
+    default: ""
   api-target:
-    description: 'Build target (linux-img/linux-deb/linux-tgz/mac-intel/mac-arm/win-x86/win-x64)'
+    description: "Build target (linux-img/linux-deb/linux-tgz/mac-intel/mac-arm/win-x86/win-x64)"
     required: true
-    default: ''
+    default: ""
   api-secret:
-    description: 'Secret for the api server'
+    description: "Secret for the api server"
     required: true
-    default: ''
+    default: ""
 runs:
-  using: 'composite'
+  using: "composite"
   steps:
     - name: Download minio client
-      if: ${{ runner.os == 'Linux' && runner.arch == 'X64' }}
-      shell: bash
-      run: |
-        wget -q https://dl.min.io/client/mc/release/linux-amd64/mc
-        chmod +x mc
-    - name: Download minio client
-      if: ${{ runner.os == 'Linux' && runner.arch == 'ARM64' }}
-      shell: bash
-      run: |
-        wget -q https://dl.min.io/client/mc/release/linux-arm64/mc
-        chmod +x mc
-    - name: Download minio client
-      if: ${{ runner.os == 'Windows' }}
-      shell: pwsh
-      run: |
-        Invoke-WebRequest -Uri "https://dl.minio.io/client/mc/release/windows-amd64/mc.exe" -OutFile "./mc"
-        chmod +x mc
-    - name: Download minio client
-      if: ${{ runner.os == 'macOS' }}
-      shell: bash
-      run: |
-        wget -q https://dl.min.io/client/mc/release/darwin-amd64/mc
-        chmod +x mc
+      uses: bitfocus/actions/download-minio-client@main
 
     - name: Upload file
       shell: bash
@@ -90,7 +68,7 @@ runs:
         else
           SHA512=$(openssl dgst -sha512 -binary "${{ inputs.source-filename }}" | base64 -w 0)
         fi
-        
+
         # Use minio and jq for this as we know both will be available
         SIZE=$(./mc stat "${{ inputs.source-filename }}" --json | jq .size)
 

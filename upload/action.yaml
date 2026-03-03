@@ -3,54 +3,39 @@ name: Upload BF S3
 description: Uploads the file to the BF S3 server
 inputs:
   filename:
-    description: 'The file to upload'
+    description: "The file to upload"
     required: true
   destination-filename:
-    description: 'Target filename in s3'
+    description: "Target filename in s3"
     required: true
-    default: ''
+    default: ""
   s3-host:
-    description: 'Server endpoint'
+    description: "Server endpoint"
     required: true
-    default: 's4.bitfocus.io'
+    default: "s4.bitfocus.io"
   s3-bucket:
-    description: 'Bucket to upload to'
+    description: "Bucket to upload to"
     required: true
-    default: ''
+    default: ""
   s3-access-key:
-    description: 'Access Key'
+    description: "Access Key"
     required: true
-    default: ''
+    default: ""
   s3-secret-key:
-    description: 'Secret Key'
+    description: "Secret Key"
     required: true
-    default: ''
+    default: ""
 outputs:
   url:
     description: "URL to uploaded file"
     value: ${{ steps.upload.outputs.url }}
 
 runs:
-  using: 'composite'
+  using: "composite"
   steps:
     - name: Download minio client
-      if: ${{ runner.os == 'Linux' }}
-      shell: bash
-      run: |
-        wget -q https://dl.min.io/client/mc/release/linux-amd64/mc
-        chmod +x mc
-    - name: Download minio client
-      if: ${{ runner.os == 'Windows' }}
-      shell: pwsh
-      run: |
-        $ProgressPreference = 'SilentlyContinue'
-        Invoke-WebRequest -Uri "https://dl.minio.io/client/mc/release/windows-amd64/mc.exe" -OutFile "./mc"
-    - name: Download minio client
-      if: ${{ runner.os == 'macOS' }}
-      shell: bash
-      run: |
-        wget -q https://dl.min.io/client/mc/release/darwin-amd64/mc
-        chmod +x mc
+      uses: bitfocus/actions/download-minio-client@main
+
     - name: Upload
       id: upload
       shell: bash

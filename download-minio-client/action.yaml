@@ -1,0 +1,36 @@
+# Most actions on github are either docker actions, or only for linux.
+name: Download minio
+description: Downloads the MinIO client
+runs:
+  using: "composite"
+  steps:
+    - name: Download minio client (Linux x64)
+      if: ${{ runner.os == 'Linux' && runner.arch == 'X64' }}
+      shell: bash
+      run: |
+        wget -q https://dl.min.io/client/mc/release/linux-amd64/mc
+        chmod +x mc
+    - name: Download minio client (Linux arm64)
+      if: ${{ runner.os == 'Linux' && runner.arch == 'ARM64' }}
+      shell: bash
+      run: |
+        wget -q https://dl.min.io/client/mc/release/linux-arm64/mc
+        chmod +x mc
+    - name: Download minio client (Windows)
+      if: ${{ runner.os == 'Windows' }}
+      shell: pwsh
+      run: |
+        $ProgressPreference = 'SilentlyContinue'
+        Invoke-WebRequest -Uri "https://dl.minio.io/client/mc/release/windows-amd64/mc.exe" -OutFile "./mc"
+    - name: Download minio client (macOS x64)
+      if: ${{ runner.os == 'macOS' && runner.arch == 'X64' }}
+      shell: bash
+      run: |
+        wget -q https://dl.min.io/client/mc/release/darwin-amd64/mc
+        chmod +x mc
+    - name: Download minio client (macOS arm64)
+      if: ${{ runner.os == 'macOS' && runner.arch == 'ARM64' }}
+      shell: bash
+      run: |
+        wget -q https://dl.min.io/client/mc/release/darwin-arm64/mc
+        chmod +x mc
