@@ -40,8 +40,10 @@ runs:
       id: upload
       shell: bash
       run: |
-        echo Upload file to https://${{ inputs.s3-host }}/${{ inputs.s3-bucket }}${{ inputs.destination-filename }}
+        S3_HOST="${{ inputs.s3-host }}"
+        [[ "$S3_HOST" != https://* ]] && S3_HOST="https://${S3_HOST}"
+        echo Upload file to ${S3_HOST}/${{ inputs.s3-bucket }}${{ inputs.destination-filename }}
         export HOME="$(pwd)" MC_CONFIG_DIR="$(pwd)"
-        ./mc alias set remote/ https://${{ inputs.s3-host }} ${{ inputs.s3-access-key }} ${{ inputs.s3-secret-key }}
+        ./mc alias set remote/ "${S3_HOST}" ${{ inputs.s3-access-key }} ${{ inputs.s3-secret-key }}
         ./mc cp "${{ inputs.filename }}" "remote/${{ inputs.s3-bucket }}/${{ inputs.destination-filename }}"
-        echo "url=https://${{ inputs.s3-host }}/${{ inputs.s3-bucket }}/${{ inputs.destination-filename }}" >> $GITHUB_OUTPUT
+        echo "url=${S3_HOST}/${{ inputs.s3-bucket }}/${{ inputs.destination-filename }}" >> $GITHUB_OUTPUT
