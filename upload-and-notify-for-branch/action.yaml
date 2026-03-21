@@ -46,6 +46,14 @@ inputs:
     description: "Secret for the api server"
     required: true
     default: ""
+  upload-url-override:
+    description: "Override the URL reported to the API server for the uploaded file"
+    required: false
+    default: ""
+outputs:
+  upload-url:
+    description: "The URL of the uploaded file as reported to the API server"
+    value: ${{ steps.notify.outputs.upload-url }}
 runs:
   using: "composite"
   steps:
@@ -60,6 +68,7 @@ runs:
         ./mc cp "${{ inputs.source-filename }}" "remote/${{ inputs.s3-bucket }}/${{ inputs.destination-filename }}"
 
     - name: Notify API Server
+      id: notify
       shell: bash
       run: |
         # This seems like the most portable way we can do this
@@ -72,6 +81,9 @@ runs:
         # Use minio and jq for this as we know both will be available
         SIZE=$(./mc stat "${{ inputs.source-filename }}" --json | jq .size)
 
+        UPLOAD_URL="${{ inputs.upload-url-override != '' && inputs.upload-url-override || format('https://{0}/{1}/{2}', inputs.s3-host, inputs.s3-bucket, inputs.destination-filename) }}"
+        echo "upload-url=${UPLOAD_URL}" >> "$GITHUB_OUTPUT"
+
         curl -X 'POST' \
           'https://api.bitfocus.io/v1/product/${{ inputs.api-product }}/package' \
           -H 'accept: application/json' \
@@ -83,6 +95,6 @@ runs:
           "filename": "${{ inputs.destination-filename }}",
           "filesize": "'${SIZE}'",
           "filesha512": "'${SHA512}'",
-          "url": "https://${{ inputs.s3-host }}/${{ inputs.s3-bucket }}/${{ inputs.destination-filename }}",
+          "url": "'${UPLOAD_URL}'",
           "secret": "${{ inputs.api-secret }}"
         }'

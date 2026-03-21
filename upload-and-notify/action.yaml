@@ -1,62 +1,69 @@
-name: 'Upload build and notify BitFocus API Server'
-description: 'Upload build and notify BitFocus API Server'
+name: "Upload build and notify BitFocus API Server"
+description: "Upload build and notify BitFocus API Server"
 inputs:
   long-version:
-    description: 'Long version number (eg 1.0.0+1234-abcdefg)'
+    description: "Long version number (eg 1.0.0+1234-abcdefg)"
     required: true
-    default: ''
+    default: ""
   beta-branch:
-    description: 'Name of branch for beta builds'
+    description: "Name of branch for beta builds"
     required: true
-    default: ''
+    default: ""
   dev-branch:
-    description: 'Name of branch for experimental builds'
+    description: "Name of branch for experimental builds"
     required: false
-    default: ''
+    default: ""
 
   source-filename:
-    description: 'File to upload'
+    description: "File to upload"
     required: true
-    default: ''
+    default: ""
   destination-filename:
-    description: 'Target filename in s3'
+    description: "Target filename in s3"
     required: true
-    default: ''
+    default: ""
   s3-host:
-    description: 'Server endpoint'
+    description: "Server endpoint"
     required: true
-    default: 's4.bitfocus.io'
+    default: "s4.bitfocus.io"
   s3-bucket:
-    description: 'Bucket to upload to'
+    description: "Bucket to upload to"
     required: true
-    default: ''
+    default: ""
   s3-access-key:
-    description: 'Access Key'
+    description: "Access Key"
     required: true
-    default: ''
+    default: ""
   s3-secret-key:
-    description: 'Secret Key'
+    description: "Secret Key"
     required: true
-    default: ''
+    default: ""
 
   api-product:
-    description: 'Name of the product'
+    description: "Name of the product"
     required: true
-    default: ''
+    default: ""
   api-target:
-    description: 'Build target (linux-img/linux-deb/linux-tgz/mac-intel/mac-arm/win-x86/win-x64)'
+    description: "Build target (linux-img/linux-deb/linux-tgz/mac-intel/mac-arm/win-x86/win-x64)"
     required: true
-    default: ''
+    default: ""
   api-secret:
-    description: 'Secret for the api server'
+    description: "Secret for the api server"
     required: true
-    default: ''
+    default: ""
+  upload-url-override:
+    description: "Override the URL reported to the API server for the uploaded file"
+    required: false
+    default: ""
 outputs:
   branch:
     description: "Type of build produced"
     value: ${{ steps.versions.outputs.branch }}
+  upload-url:
+    description: "The URL of the uploaded file as reported to the API server"
+    value: ${{ steps.upload.outputs.upload-url }}
 runs:
-  using: 'composite'
+  using: "composite"
   steps:
     - id: versions
       name: Determine versions
@@ -85,6 +92,7 @@ runs:
          fi
 
     - name: Upload and Notify API Server
+      id: upload
       if: ${{ steps.versions.outputs.version && steps.versions.outputs.branch }}
       uses: bitfocus/actions/upload-and-notify-for-branch@main
       with:
@@ -100,3 +108,4 @@ runs:
         api-product: ${{ inputs.api-product }}
         api-target: ${{ inputs.api-target }}
         api-secret: ${{ inputs.api-secret }}
+        upload-url-override: ${{ inputs.upload-url-override }}
