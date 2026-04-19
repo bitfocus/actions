@@ -51,8 +51,8 @@ inputs:
     description: "Secret for the api server"
     required: true
     default: ""
-  upload-url-override:
-    description: "Override the URL reported to the API server for the uploaded file"
+  public-bucket-url:
+    description: "URL prefix for the uploaded file (action appends the sanitized destination-filename)"
     required: false
     default: ""
 outputs:
@@ -108,4 +108,4 @@ runs:
         api-product: ${{ inputs.api-product }}
         api-target: ${{ inputs.api-target }}
         api-secret: ${{ inputs.api-secret }}
-        upload-url-override: ${{ inputs.upload-url-override }}
+        public-bucket-url: ${{ inputs.public-bucket-url }}

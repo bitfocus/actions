@@ -46,8 +46,8 @@ inputs:
     description: "Secret for the api server"
     required: true
     default: ""
-  upload-url-override:
-    description: "Override the URL reported to the API server for the uploaded file"
+  public-bucket-url:
+    description: "URL prefix for the uploaded file (action appends the sanitized destination-filename)"
     required: false
     default: ""
 outputs:
@@ -60,6 +60,14 @@ runs:
     - name: Download minio client
       uses: bitfocus/actions/download-minio-client@main
 
+    - name: Sanitize filenames
+      id: sanitize
+      shell: bash
+      run: |
+        # Replace + with - to avoid URL encoding issues (CloudFront treats + as a space)
+        DEST="${{ inputs.destination-filename }}"
+        echo "destination-filename=${DEST//+/-}" >> "$GITHUB_OUTPUT"
+
     - name: Upload file
       shell: bash
       run: |
@@ -68,7 +76,7 @@ runs:
 
         ./mc alias set remote/ "${S3_HOST}" ${{ inputs.s3-access-key }} ${{ inputs.s3-secret-key }}
 
-        ./mc cp "${{ inputs.source-filename }}" "remote/${{ inputs.s3-bucket }}/${{ inputs.destination-filename }}"
+        ./mc cp "${{ inputs.source-filename }}" "remote/${{ inputs.s3-bucket }}/${{ steps.sanitize.outputs.destination-filename }}"
 
     - name: Notify API Server
       id: notify
@@ -84,11 +92,13 @@ runs:
         # Use minio and jq for this as we know both will be available
         SIZE=$(./mc stat "${{ inputs.source-filename }}" --json | jq .size)
 
-        UPLOAD_URL="${{ inputs.upload-url-override }}"
-        if [[ -z "$UPLOAD_URL" ]]; then
+        UPLOAD_URL_PREFIX="${{ inputs.public-bucket-url }}"
+        if [[ -n "$UPLOAD_URL_PREFIX" ]]; then
+          UPLOAD_URL="${UPLOAD_URL_PREFIX}/${{ steps.sanitize.outputs.destination-filename }}"
+        else
           S3_HOST="${{ inputs.s3-host }}"
           [[ "$S3_HOST" != https://* ]] && S3_HOST="https://${S3_HOST}"
-          UPLOAD_URL="${S3_HOST}/${{ inputs.s3-bucket }}/${{ inputs.destination-filename }}"
+          UPLOAD_URL="${S3_HOST}/${{ inputs.s3-bucket }}/${{ steps.sanitize.outputs.destination-filename }}"
         fi
         echo "upload-url=${UPLOAD_URL}" >> "$GITHUB_OUTPUT"
 
