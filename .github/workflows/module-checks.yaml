@@ -233,15 +233,43 @@ jobs:
             MAIN_JS="pkg/main.js"
           fi
 
-          RESULT=$(node "$MAIN_JS" 2>&1)
-          CODE=$?
-          if [ $CODE -eq 0 ]; then
-            echo "Module launched successfully"
-          elif echo "$RESULT" | grep -q "Failed to startup module"; then
-            # This means it is a connection, and the entrypoint was the cause of the exit
-            echo "Module launched successfully"
+          API_VERSION=$(jq -r '.runtime.apiVersion // "0.0.0"' companion/manifest.json)
+          API_MAJOR=$(echo "$API_VERSION" | cut -d. -f1)
+          MODULE_TYPE="${{ steps.collect-info.outputs.module-type }}"
+
+          if [ "$MODULE_TYPE" == "module" ] && [ "$API_MAJOR" == "2" ]; then
+            # For connections with API 2.x: import main.js and verify the exported value (or its default) is a function
+            RESULT=$(MAIN_JS="$MAIN_JS" node -e "
+              (async () => {
+                const mainPath = 'file://' + process.cwd() + '/' + process.env.MAIN_JS;
+                const mod = await import(mainPath);
+                const isFunction = typeof mod === 'function' || typeof mod.default === 'function';
+                if (!isFunction) {
+                  process.stderr.write('Module export is not a function\n');
+                  process.exit(99);
+                }
+                process.stdout.write('Module export is a function\n');
+              })().catch(e => { process.stderr.write(String(e) + '\n'); process.exit(99); });
+              " 2>&1)
+            CODE=$?
+            if [ $CODE -eq 0 ]; then
+              echo "Module loaded successfully"
+            else
+              echo "Module failed to load:"
+              echo "$RESULT"
+              exit 99
+            fi
           else
-            echo "Module failed to launch:"
-            echo "$RESULT"
-            exit 99
+            RESULT=$(node "$MAIN_JS" 2>&1)
+            CODE=$?
+            if [ $CODE -eq 0 ]; then
+              echo "Module loaded successfully"
+            elif echo "$RESULT" | grep -q "Failed to startup module"; then
+              # This means it is a connection, and the entrypoint was the cause of the exit
+              echo "Module loaded successfully"
+            else
+              echo "Module failed to load:"
+              echo "$RESULT"
+              exit 99
+            fi
           fi
