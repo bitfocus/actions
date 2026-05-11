@@ -229,15 +229,19 @@ jobs:
           MODULE_NAME="${{ steps.collect-info.outputs.module-name }}"
           if [ -f "pkg/${MODULE_NAME}/main.js" ]; then
             MAIN_JS="pkg/${MODULE_NAME}/main.js"
+            MANIFEST_PATH="pkg/${MODULE_NAME}/companion/manifest.json"
           else
             MAIN_JS="pkg/main.js"
+            MANIFEST_PATH="pkg/companion/manifest.json"
           fi
 
-          API_VERSION=$(jq -r '.runtime.apiVersion // "0.0.0"' companion/manifest.json)
+          API_VERSION=$(jq -r '.runtime.apiVersion // "0.0.0"' "$MANIFEST_PATH")
           API_MAJOR=$(echo "$API_VERSION" | cut -d. -f1)
           MODULE_TYPE="${{ steps.collect-info.outputs.module-type }}"
 
           if [ "$MODULE_TYPE" == "module" ] && [ "$API_MAJOR" == "2" ]; then
+            echo "Testing module with connection API 2.x loading logic"
+
             # For connections with API 2.x: import main.js and verify the exported value (or its default) is a function
             RESULT=$(MAIN_JS="$MAIN_JS" node -e "
               (async () => {
@@ -260,6 +264,8 @@ jobs:
               exit 99
             fi
           else
+            echo "Testing with import only loading logic"
+
             RESULT=$(node "$MAIN_JS" 2>&1)
             CODE=$?
             if [ $CODE -eq 0 ]; then
