@@ -28,6 +28,11 @@ on:
         description: "If set, this is a prerelease"
         required: false
         default: false
+      is-developer-portal:
+        type: boolean
+        description: "If set, the build is being run by the developer portal (rather than a module repository). Enables portal-specific behaviour such as forcing an old @companion-module/tools version up to the minimum supported instead of failing"
+        required: false
+        default: false
     outputs:
       package-file:
         description: "Filename of the produced package"
@@ -182,13 +187,57 @@ jobs:
             yarn config set 'npmRegistries["//npm.pkg.github.com"].npmAuthToken' "${{ github.token }}"
           fi
 
-      - name: Prepare module
+      - name: Install dependencies
         shell: bash
         run: |
           yarn install
 
+      - name: Enforce module-tools version
+        shell: bash
+        run: |
+          set -e
+          PKG="@companion-module/tools"
+
+          # Resolve the actually-installed version. `yarn node` works for both
+          # node-modules and Yarn Berry PnP linker setups.
+          INSTALLED=$(yarn node -e "console.log(require('$PKG/package.json').version)" 2>/dev/null) || {
+            echo "::error::Could not resolve $PKG. The module must depend on it."
+            exit 99
+          }
+          echo "Installed $PKG version: $INSTALLED"
+
+          MAJOR=${INSTALLED%%.*}
+          if [ "$MAJOR" -le 2 ]; then
+            FLOOR="2.8.0"
+          elif [ "$MAJOR" -eq 3 ]; then
+            FLOOR="3.1.0"
+          else
+            echo "$PKG $INSTALLED is new enough"
+            exit 0
+          fi
+
+          # INSTALLED >= FLOOR when FLOOR sorts lowest (or they are equal)
+          LOWEST=$(printf '%s\n%s\n' "$INSTALLED" "$FLOOR" | sort -V | head -n1)
+          if [ "$INSTALLED" = "$FLOOR" ] || [ "$LOWEST" = "$FLOOR" ]; then
+            echo "$PKG $INSTALLED meets the minimum ($FLOOR)"
+            exit 0
+          fi
+
+          if [ "${{ inputs.is-developer-portal }}" = "true" ]; then
+            echo "$PKG $INSTALLED is below $FLOOR - forcing to $FLOOR"
+            yarn add -D -E "$PKG@$FLOOR"
+            NEW=$(yarn node -e "console.log(require('$PKG/package.json').version)")
+            echo "$PKG is now $NEW"
+          else
+            echo "::error::$PKG version $INSTALLED is below the minimum supported version ($FLOOR). Please upgrade $PKG."
+            exit 99
+          fi
+
+      - name: Build module
+        shell: bash
+        run: |
           # Some modules have a build script, but many do not
-          if jq -e '.scripts.build' package.json > /dev/null; then 
+          if jq -e '.scripts.build' package.json > /dev/null; then
             yarn run build
           fi
 
