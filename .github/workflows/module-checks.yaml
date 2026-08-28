@@ -198,9 +198,30 @@ jobs:
           set -e
           PKG="@companion-module/tools"
 
-          # Resolve the actually-installed version. `yarn node` works for both
-          # node-modules and Yarn Berry PnP linker setups.
-          INSTALLED=$(yarn node -e "console.log(require('$PKG/package.json').version)" 2>/dev/null) || {
+          # Resolve the actually-installed version of PKG. We can't just read
+          # `<pkg>/package.json`: Node's "exports" field frequently blocks that
+          # subpath (ERR_PACKAGE_PATH_NOT_EXPORTED). Instead resolve the package's
+          # main entry (always allowed) and walk up to the nearest package.json
+          # whose name matches. `yarn node` keeps this working for both the
+          # node-modules and Yarn Berry PnP linkers.
+          get_version() {
+            yarn node -e '
+              const fs = require("fs"), path = require("path");
+              const name = process.argv[1];
+              let dir = path.dirname(require.resolve(name));
+              while (dir !== path.dirname(dir)) {
+                const pj = path.join(dir, "package.json");
+                if (fs.existsSync(pj)) {
+                  const j = JSON.parse(fs.readFileSync(pj, "utf8"));
+                  if (j.name === name) { process.stdout.write(j.version); process.exit(0); }
+                }
+                dir = path.dirname(dir);
+              }
+              process.exit(3);
+            ' "$PKG" 2>/dev/null
+          }
+
+          INSTALLED=$(get_version) || {
             echo "::error::Could not resolve $PKG. The module must depend on it."
             exit 99
           }
@@ -226,7 +247,7 @@ jobs:
           if [ "${{ inputs.is-developer-portal }}" = "true" ]; then
             echo "$PKG $INSTALLED is below $FLOOR - forcing to $FLOOR"
             yarn add -D -E "$PKG@$FLOOR"
-            NEW=$(yarn node -e "console.log(require('$PKG/package.json').version)")
+            NEW=$(get_version)
             echo "$PKG is now $NEW"
           else
             echo "::error::$PKG version $INSTALLED is below the minimum supported version ($FLOOR). Please upgrade $PKG."
