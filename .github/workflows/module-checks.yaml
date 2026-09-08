@@ -58,6 +58,7 @@ jobs:
           persist-credentials: false
           token: ${{ secrets.GITHUB_TOKEN }}
           ref: ${{ inputs.git-ref }}
+          submodules: recursive
 
       - name: Check module hash
         if: ${{ inputs.git-sha-check }}
