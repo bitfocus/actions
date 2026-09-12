@@ -55,7 +55,7 @@ runs:
         set -euo pipefail
         S3_HOST="$S3_HOST_INPUT"
         [[ "$S3_HOST" != https://* ]] && S3_HOST="https://${S3_HOST}"
-        echo "Upload file to ${S3_HOST}/${S3_BUCKET}${DESTINATION_FILENAME}"
+        echo "Upload file to ${S3_HOST}/${S3_BUCKET}/${DESTINATION_FILENAME}"
         export RCLONE_CONFIG_REMOTE_TYPE="s3"
         export RCLONE_CONFIG_REMOTE_PROVIDER="Other"
         export RCLONE_CONFIG_REMOTE_ENV_AUTH="false"

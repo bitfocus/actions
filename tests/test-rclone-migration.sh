@@ -33,6 +33,7 @@ for action in upload upload-artifact upload-and-notify-for-branch; do
   assert_contains 'RCLONE_CONFIG_REMOTE_REGION="$S3_REGION"' "$file"
   if [[ "$action" == upload ]]; then
     assert_contains "url=\${S3_HOST}/\${S3_BUCKET}/\${DESTINATION_FILENAME}" "$file"
+    assert_contains 'echo "Upload file to ${S3_HOST}/${S3_BUCKET}/${DESTINATION_FILENAME}"' "$file"
   fi
   if grep -Eq '(^|[^[:alnum:]_-])mc([^[:alnum:]_-]|$)|download-minio-client|dl\.min\.io' "$file"; then
     printf 'legacy MinIO client reference in %s\n' "$file" >&2
