@@ -23,9 +23,11 @@ assert_contains 'sha256sum --check --status' "$DOWNLOADER"
 for action in upload upload-artifact upload-and-notify-for-branch; do
   file="$ROOT/$action/action.yaml"
   assert_contains 'download-rclone@no-minio' "$file"
-  assert_contains './rclone copyto' "$file"
-  assert_contains '--no-check-dest' "$file"
+  assert_contains './rclone rcat' "$file"
+  assert_contains '--size "$FILE_SIZE"' "$file"
   assert_contains '--s3-no-head' "$file"
+  assert_contains '--s3-no-check-bucket' "$file"
+  assert_contains 'RCLONE_CONFIG_REMOTE_REGION="eu-north-1"' "$file"
   if [[ "$action" == upload ]]; then
     assert_contains "url=\${S3_HOST}/\${S3_BUCKET}/\${DESTINATION_FILENAME}" "$file"
   fi
