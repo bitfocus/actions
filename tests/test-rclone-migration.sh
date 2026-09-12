@@ -22,12 +22,12 @@ assert_contains 'sha256sum --check --status' "$DOWNLOADER"
 
 for action in upload upload-artifact upload-and-notify-for-branch; do
   file="$ROOT/$action/action.yaml"
-  assert_contains 'download-rclone@main' "$file"
+  assert_contains 'download-rclone@no-minio' "$file"
   assert_contains './rclone copyto' "$file"
   if [[ "$action" == upload ]]; then
     assert_contains "url=\${S3_HOST}/\${S3_BUCKET}/\${DESTINATION_FILENAME}" "$file"
   fi
-  if grep -Eq '(^|[^[:alnum:]_-])mc([^[:alnum:]_-]|$)|minio' "$file"; then
+  if grep -Eq '(^|[^[:alnum:]_-])mc([^[:alnum:]_-]|$)|download-minio-client|dl\.min\.io' "$file"; then
     printf 'legacy MinIO client reference in %s\n' "$file" >&2
     exit 1
   fi
@@ -35,3 +35,8 @@ done
 
 assert_contains './rclone size --json' "$ROOT/upload-and-notify-for-branch/action.yaml"
 assert_contains '.bytes' "$ROOT/upload-and-notify-for-branch/action.yaml"
+assert_contains 'upload-and-notify-for-branch@no-minio' "$ROOT/upload-and-notify/action.yaml"
+if rg -n --hidden -S 'uses: .*@main' "$ROOT" -g '!\.git' -g '!tests/*'; then
+  printf 'main branch reference remains in nested action use\n' >&2
+  exit 1
+fi

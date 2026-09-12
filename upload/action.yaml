@@ -34,7 +34,7 @@ runs:
   using: "composite"
   steps:
     - name: Download rclone client
-      uses: bitfocus/actions/download-rclone@main
+      uses: bitfocus/actions/download-rclone@no-minio
 
     - name: Upload
       id: upload
