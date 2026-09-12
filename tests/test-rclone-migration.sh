@@ -22,7 +22,7 @@ assert_contains 'sha256sum --check --status' "$DOWNLOADER"
 
 for action in upload upload-artifact upload-and-notify-for-branch; do
   file="$ROOT/$action/action.yaml"
-  assert_contains 'download-rclone@no-minio' "$file"
+  assert_contains '$/download-rclone' "$file"
   assert_contains './rclone rcat' "$file"
   assert_contains '--size "$FILE_SIZE"' "$file"
   assert_contains '--s3-no-head' "$file"
@@ -42,7 +42,7 @@ done
 
 assert_contains './rclone size --json' "$ROOT/upload-and-notify-for-branch/action.yaml"
 assert_contains '.bytes' "$ROOT/upload-and-notify-for-branch/action.yaml"
-assert_contains 'upload-and-notify-for-branch@no-minio' "$ROOT/upload-and-notify/action.yaml"
+assert_contains '$/upload-and-notify-for-branch' "$ROOT/upload-and-notify/action.yaml"
 assert_contains 's3-region: ${{ inputs.s3-region }}' "$ROOT/upload-and-notify/action.yaml"
 if rg -n --hidden -S 'uses: .*@main' "$ROOT" -g '!\.git' -g '!tests/*'; then
   printf 'main branch reference remains in nested action use\n' >&2
