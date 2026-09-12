@@ -1,0 +1,104 @@
+# Most actions on github are either docker actions, or only for linux.
+name: Download rclone
+description: Downloads the rclone client
+runs:
+  using: "composite"
+  steps:
+    - name: Download rclone client (Linux x64)
+      if: ${{ runner.os == 'Linux' && runner.arch == 'X64' }}
+      shell: bash
+      env:
+        RCLONE_VERSION: "1.75.1"
+        RCLONE_SHA256: "982b5aa772841168f8e380f139e9e787b2a105403e32b94da8676a0e1c0a13ab"
+      run: |
+        set -euo pipefail
+        archive="rclone.zip"
+        extract_dir="rclone-extracted"
+        curl --fail --location --silent --show-error --retry 3 \
+          -o "$archive" \
+          "https://downloads.rclone.org/v${RCLONE_VERSION}/rclone-v${RCLONE_VERSION}-linux-amd64.zip"
+        printf '%s  %s\n' "$RCLONE_SHA256" "$archive" | sha256sum --check --status
+        rm -rf "$extract_dir"
+        unzip -q "$archive" -d "$extract_dir"
+        install -m 0755 "$extract_dir/rclone-v${RCLONE_VERSION}-linux-amd64/rclone" ./rclone
+        rm -rf "$archive" "$extract_dir"
+
+    - name: Download rclone client (Linux arm64)
+      if: ${{ runner.os == 'Linux' && runner.arch == 'ARM64' }}
+      shell: bash
+      env:
+        RCLONE_VERSION: "1.75.1"
+        RCLONE_SHA256: "03f2504174034b6d004152ed7369251c9a9ec1f7e0836eda420f5c7a5ec0dff9"
+      run: |
+        set -euo pipefail
+        archive="rclone.zip"
+        extract_dir="rclone-extracted"
+        curl --fail --location --silent --show-error --retry 3 \
+          -o "$archive" \
+          "https://downloads.rclone.org/v${RCLONE_VERSION}/rclone-v${RCLONE_VERSION}-linux-arm64.zip"
+        printf '%s  %s\n' "$RCLONE_SHA256" "$archive" | sha256sum --check --status
+        rm -rf "$extract_dir"
+        unzip -q "$archive" -d "$extract_dir"
+        install -m 0755 "$extract_dir/rclone-v${RCLONE_VERSION}-linux-arm64/rclone" ./rclone
+        rm -rf "$archive" "$extract_dir"
+
+    - name: Download rclone client (Windows)
+      if: ${{ runner.os == 'Windows' }}
+      shell: pwsh
+      env:
+        RCLONE_VERSION: "1.75.1"
+        RCLONE_SHA256: "200eb602c126d82aa38b51e0f6b9ae837473ff99b51278d3f6f837574c494d6e"
+      run: |
+        $ErrorActionPreference = 'Stop'
+        $archive = 'rclone.zip'
+        $extractDir = 'rclone-extracted'
+        Invoke-WebRequest `
+          -Uri "https://downloads.rclone.org/v$env:RCLONE_VERSION/rclone-v$env:RCLONE_VERSION-windows-amd64.zip" `
+          -OutFile $archive
+        $actualHash = (Get-FileHash $archive -Algorithm SHA256).Hash.ToLowerInvariant()
+        if ($actualHash -ne $env:RCLONE_SHA256) {
+          throw "Checksum mismatch: expected $env:RCLONE_SHA256, got $actualHash"
+        }
+        Expand-Archive -Path $archive -DestinationPath $extractDir -Force
+        Copy-Item "$extractDir\rclone-v$env:RCLONE_VERSION-windows-amd64\rclone.exe" '.\rclone' -Force
+        Remove-Item $archive, $extractDir -Recurse -Force
+
+    - name: Download rclone client (macOS x64)
+      if: ${{ runner.os == 'macOS' && runner.arch == 'X64' }}
+      shell: bash
+      env:
+        RCLONE_VERSION: "1.75.1"
+        RCLONE_SHA256: "29253d0288b8fbbac46baad6e5f6add6cb01d462c79f10805bbd4631c4cdf82c"
+      run: |
+        set -euo pipefail
+        archive="rclone.zip"
+        extract_dir="rclone-extracted"
+        curl --fail --location --silent --show-error --retry 3 \
+          -o "$archive" \
+          "https://downloads.rclone.org/v${RCLONE_VERSION}/rclone-v${RCLONE_VERSION}-osx-amd64.zip"
+        actual_hash=$(shasum -a 256 "$archive" | awk '{print $1}')
+        [[ "$actual_hash" == "$RCLONE_SHA256" ]]
+        rm -rf "$extract_dir"
+        unzip -q "$archive" -d "$extract_dir"
+        install -m 0755 "$extract_dir/rclone-v${RCLONE_VERSION}-osx-amd64/rclone" ./rclone
+        rm -rf "$archive" "$extract_dir"
+
+    - name: Download rclone client (macOS arm64)
+      if: ${{ runner.os == 'macOS' && runner.arch == 'ARM64' }}
+      shell: bash
+      env:
+        RCLONE_VERSION: "1.75.1"
+        RCLONE_SHA256: "c61d7a371c62bcbbe882c3423aa4b8bf63485c248dd0f692997b8f0c3f6d0c6f"
+      run: |
+        set -euo pipefail
+        archive="rclone.zip"
+        extract_dir="rclone-extracted"
+        curl --fail --location --silent --show-error --retry 3 \
+          -o "$archive" \
+          "https://downloads.rclone.org/v${RCLONE_VERSION}/rclone-v${RCLONE_VERSION}-osx-arm64.zip"
+        actual_hash=$(shasum -a 256 "$archive" | awk '{print $1}')
+        [[ "$actual_hash" == "$RCLONE_SHA256" ]]
+        rm -rf "$extract_dir"
+        unzip -q "$archive" -d "$extract_dir"
+        install -m 0755 "$extract_dir/rclone-v${RCLONE_VERSION}-osx-arm64/rclone" ./rclone
+        rm -rf "$archive" "$extract_dir"

@@ -33,17 +33,29 @@ outputs:
 runs:
   using: "composite"
   steps:
-    - name: Download minio client
-      uses: bitfocus/actions/download-minio-client@main
+    - name: Download rclone client
+      uses: bitfocus/actions/download-rclone@main
 
     - name: Upload
       id: upload
       shell: bash
+      env:
+        SOURCE_FILENAME: ${{ inputs.filename }}
+        DESTINATION_FILENAME: ${{ inputs.destination-filename }}
+        S3_HOST_INPUT: ${{ inputs.s3-host }}
+        S3_BUCKET: ${{ inputs.s3-bucket }}
+        S3_ACCESS_KEY: ${{ inputs.s3-access-key }}
+        S3_SECRET_KEY: ${{ inputs.s3-secret-key }}
       run: |
-        S3_HOST="${{ inputs.s3-host }}"
+        set -euo pipefail
+        S3_HOST="$S3_HOST_INPUT"
         [[ "$S3_HOST" != https://* ]] && S3_HOST="https://${S3_HOST}"
-        echo Upload file to ${S3_HOST}/${{ inputs.s3-bucket }}${{ inputs.destination-filename }}
-        export HOME="$(pwd)" MC_CONFIG_DIR="$(pwd)"
-        ./mc alias set remote/ "${S3_HOST}" ${{ inputs.s3-access-key }} ${{ inputs.s3-secret-key }}
-        ./mc cp "${{ inputs.filename }}" "remote/${{ inputs.s3-bucket }}/${{ inputs.destination-filename }}"
-        echo "url=${S3_HOST}/${{ inputs.s3-bucket }}/${{ inputs.destination-filename }}" >> $GITHUB_OUTPUT
+        echo "Upload file to ${S3_HOST}/${S3_BUCKET}${DESTINATION_FILENAME}"
+        export RCLONE_CONFIG_REMOTE_TYPE="s3"
+        export RCLONE_CONFIG_REMOTE_PROVIDER="Other"
+        export RCLONE_CONFIG_REMOTE_ENV_AUTH="false"
+        export RCLONE_CONFIG_REMOTE_ACCESS_KEY_ID="$S3_ACCESS_KEY"
+        export RCLONE_CONFIG_REMOTE_SECRET_ACCESS_KEY="$S3_SECRET_KEY"
+        export RCLONE_CONFIG_REMOTE_ENDPOINT="$S3_HOST"
+        ./rclone copyto "$SOURCE_FILENAME" "remote:${S3_BUCKET}/${DESTINATION_FILENAME}"
+        echo "url=${S3_HOST}/${S3_BUCKET}/${DESTINATION_FILENAME}" >> "$GITHUB_OUTPUT"
