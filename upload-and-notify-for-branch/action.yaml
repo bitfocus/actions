@@ -13,6 +13,10 @@ inputs:
     description: "Server endpoint"
     required: true
     default: "s4.bitfocus.io"
+  s3-region:
+    description: "S3 region"
+    required: false
+    default: "eu-north-1"
   s3-bucket:
     description: "Bucket to upload to"
     required: true
@@ -57,8 +61,8 @@ outputs:
 runs:
   using: "composite"
   steps:
-    - name: Download minio client
-      uses: bitfocus/actions/download-minio-client@main
+    - name: Download rclone client
+      uses: $/download-rclone
 
     - name: Sanitize filenames
       id: sanitize
@@ -70,27 +74,46 @@ runs:
 
     - name: Upload file
       shell: bash
+      env:
+        SOURCE_FILENAME: ${{ inputs.source-filename }}
+        DESTINATION_FILENAME: ${{ steps.sanitize.outputs.destination-filename }}
+        S3_HOST_INPUT: ${{ inputs.s3-host }}
+        S3_REGION: ${{ inputs.s3-region }}
+        S3_BUCKET: ${{ inputs.s3-bucket }}
+        S3_ACCESS_KEY: ${{ inputs.s3-access-key }}
+        S3_SECRET_KEY: ${{ inputs.s3-secret-key }}
       run: |
-        S3_HOST="${{ inputs.s3-host }}"
+        set -euo pipefail
+        S3_HOST="$S3_HOST_INPUT"
         [[ "$S3_HOST" != https://* ]] && S3_HOST="https://${S3_HOST}"
 
-        ./mc alias set remote/ "${S3_HOST}" ${{ inputs.s3-access-key }} ${{ inputs.s3-secret-key }}
-
-        ./mc cp "${{ inputs.source-filename }}" "remote/${{ inputs.s3-bucket }}/${{ steps.sanitize.outputs.destination-filename }}"
+        export RCLONE_CONFIG_REMOTE_TYPE="s3"
+        export RCLONE_CONFIG_REMOTE_PROVIDER="Other"
+        export RCLONE_CONFIG_REMOTE_ENV_AUTH="false"
+        export RCLONE_CONFIG_REMOTE_ACCESS_KEY_ID="$S3_ACCESS_KEY"
+        export RCLONE_CONFIG_REMOTE_SECRET_ACCESS_KEY="$S3_SECRET_KEY"
+        export RCLONE_CONFIG_REMOTE_ENDPOINT="$S3_HOST"
+        export RCLONE_CONFIG_REMOTE_REGION="$S3_REGION"
+        FILE_SIZE=$(wc -c < "$SOURCE_FILENAME" | tr -d '[:space:]')
+        # rcat writes one remote object, like S3 PutObject.
+        ./rclone rcat "remote:${S3_BUCKET}/${DESTINATION_FILENAME}" \
+          --size "$FILE_SIZE" --s3-no-head --s3-no-check-bucket < "$SOURCE_FILENAME"
 
     - name: Notify API Server
       id: notify
       shell: bash
+      env:
+        SOURCE_FILENAME: ${{ inputs.source-filename }}
       run: |
         # This seems like the most portable way we can do this
         if ${{ runner.os == 'macOS' }}; then
-          SHA512=$(openssl dgst -sha512 -binary "${{ inputs.source-filename }}" | base64)
+          SHA512=$(openssl dgst -sha512 -binary "$SOURCE_FILENAME" | base64)
         else
-          SHA512=$(openssl dgst -sha512 -binary "${{ inputs.source-filename }}" | base64 -w 0)
+          SHA512=$(openssl dgst -sha512 -binary "$SOURCE_FILENAME" | base64 -w 0)
         fi
 
-        # Use minio and jq for this as we know both will be available
-        SIZE=$(./mc stat "${{ inputs.source-filename }}" --json | jq .size)
+        # Use rclone and jq for this as we know both will be available
+        SIZE=$(./rclone size --json "$SOURCE_FILENAME" | jq -r .bytes)
 
         UPLOAD_URL_PREFIX="${{ inputs.public-bucket-url }}"
         if [[ -n "$UPLOAD_URL_PREFIX" ]]; then
