@@ -74,16 +74,25 @@ jobs:
         id: determine-nodejs
         shell: bash
         run: |
-          NODE_VERSION=$(jq '.runtime.type' companion/manifest.json)
-          echo "Node.js version: $NODE_VERSION"
+          NODE_RUNTIME=$(jq -r '.runtime.type' companion/manifest.json)
+          echo "Manifest runtime type: $NODE_RUNTIME"
 
-          if [ "$NODE_VERSION" == "\"node18\"" ]; then
-            echo "Using Node.js 18.x"
-            echo "version=18.x" >> $GITHUB_OUTPUT
-          elif [ "$NODE_VERSION" == "\"node22\"" ]; then
-            echo "Using Node.js 22.x"
-            echo "version=22.x" >> $GITHUB_OUTPUT
-          fi
+          # Note: an unknown value must fail here. If nothing is written to
+          # $GITHUB_OUTPUT, setup-node silently falls back to whatever node
+          # version is preinstalled on the runner, and the module gets built
+          # against the wrong runtime without any workflow failure.
+          case "$NODE_RUNTIME" in
+            node18) NODE_VERSION="18.x" ;;
+            node22) NODE_VERSION="22.x" ;;
+            node26) NODE_VERSION="26.x" ;;
+            *)
+              echo "::error::Unsupported runtime.type '$NODE_RUNTIME' in companion/manifest.json. Supported values are: node18, node22, node26"
+              exit 99
+              ;;
+          esac
+
+          echo "Using Node.js $NODE_VERSION"
+          echo "version=$NODE_VERSION" >> $GITHUB_OUTPUT
 
       - name: Use Node.js ${{ steps.determine-nodejs.outputs.version }}
         uses: actions/setup-node@v6
