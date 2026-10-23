@@ -33,6 +33,11 @@ on:
         description: "If set, the build is being run by the developer portal (rather than a module repository). Enables portal-specific behaviour such as forcing an old @companion-module/tools version up to the minimum supported instead of failing"
         required: false
         default: false
+      skip-module-api-check:
+        type: boolean
+        description: "Skip the minimum module-api (@companion-module/base or @companion-surface/base) version check"
+        required: false
+        default: false
     outputs:
       package-file:
         description: "Filename of the produced package"
@@ -290,6 +295,106 @@ jobs:
             echo "Unknown module type '${{ steps.collect-info.outputs.module-type }}'"
             exit 99
           fi
+
+      - name: Enforce minimum module-api version
+        if: ${{ !inputs.skip-module-api-check }}
+        shell: bash
+        run: |
+          set -e
+
+          MODULE_NAME="${{ steps.collect-info.outputs.module-name }}"
+          MODULE_TYPE="${{ steps.collect-info.outputs.module-type }}"
+          REPO_OWNER="${{ inputs.repository-name }}"
+          REPO_OWNER="${REPO_OWNER%%/*}"
+
+          # The minimum supported api and runtime versions. A patch release is allowed to be older,
+          # as long as it is no older than the previous release of the same minor.
+          MIN_RUNTIME=18
+          if [ "$MODULE_TYPE" == "module" ]; then
+            MIN_API="1.11.0" # @companion-module/base
+          elif [ "$MODULE_TYPE" == "surface" ]; then
+            MIN_API="1.2.0" # @companion-surface/base
+          else
+            echo "Unknown module type '$MODULE_TYPE'"
+            exit 99
+          fi
+
+          if [ -f "pkg/${MODULE_NAME}/companion/manifest.json" ]; then
+            MANIFEST_PATH="pkg/${MODULE_NAME}/companion/manifest.json"
+          else
+            MANIFEST_PATH="pkg/companion/manifest.json"
+          fi
+
+          CURRENT_VERSION=$(jq -r '.version // ""' "$MANIFEST_PATH")
+          API_VERSION=$(jq -r '.runtime.apiVersion // ""' "$MANIFEST_PATH")
+          RUNTIME_TYPE=$(jq -r '.runtime.type // ""' "$MANIFEST_PATH")
+          RUNTIME_NUM=${RUNTIME_TYPE#node}
+          if [ -z "$API_VERSION" ] || ! [[ "$RUNTIME_NUM" =~ ^[0-9]+$ ]]; then
+            echo "::error::Built manifest has an invalid runtime.apiVersion '$API_VERSION' or runtime.type '$RUNTIME_TYPE'"
+            exit 99
+          fi
+          echo "Module version $CURRENT_VERSION uses api $API_VERSION on $RUNTIME_TYPE"
+
+          # Succeeds when $1 >= $2. A prerelease sorts below its release (1.11.0-beta.1 < 1.11.0)
+          version_gte() {
+            local A_BASE=${1%%-*} B_BASE=${2%%-*}
+            if [ "$A_BASE" != "$B_BASE" ]; then
+              [ "$(printf '%s\n%s\n' "$A_BASE" "$B_BASE" | sort -V | head -n1)" = "$B_BASE" ]
+            elif [ "$1" = "$A_BASE" ]; then
+              return 0
+            elif [ "$2" = "$B_BASE" ]; then
+              return 1
+            else
+              [ "$(printf '%s\n%s\n' "$1" "$2" | sort -V | head -n1)" = "$2" ]
+            fi
+          }
+
+          if version_gte "$API_VERSION" "$MIN_API" && [ "$RUNTIME_NUM" -ge "$MIN_RUNTIME" ]; then
+            echo "Meets the minimum of api $MIN_API on node$MIN_RUNTIME"
+            exit 0
+          fi
+
+          # Patch release exception: look up the previous release of this minor from the developer portal
+          PREV_VERSION=""
+          PREV_API=""
+          PREV_RUNTIME=""
+          if [ "${REPO_OWNER,,}" == "bitfocus" ]; then
+            IFS=. read -r CUR_MAJOR CUR_MINOR _ <<< "${CURRENT_VERSION%%-*}"
+            URL="https://developer.bitfocus.io/api/v1/modules/${MODULE_TYPE}/${MODULE_NAME}/releases?minor=${CUR_MAJOR}.${CUR_MINOR}"
+            RELEASES_FILE="$RUNNER_TEMP/module-releases.json"
+            echo "Looking up previous releases from $URL"
+            HTTP_CODE=$(curl -sS --max-time 20 -o "$RELEASES_FILE" -w '%{http_code}' "$URL") || HTTP_CODE="000"
+
+            if [ "$HTTP_CODE" == "200" ]; then
+              while IFS=$'\t' read -r REL_VERSION REL_API REL_RUNTIME; do
+                REL_VERSION=${REL_VERSION#v}
+                # only consider releases of the same minor which are older than this one
+                [[ "$REL_VERSION" == "${CUR_MAJOR}.${CUR_MINOR}."* ]] || continue
+                version_gte "$REL_VERSION" "$CURRENT_VERSION" && continue
+                if [ -z "$PREV_VERSION" ] || version_gte "$REL_VERSION" "$PREV_VERSION"; then
+                  PREV_VERSION="$REL_VERSION"
+                  PREV_API="$REL_API"
+                  PREV_RUNTIME="$REL_RUNTIME"
+                fi
+              done < <(jq -r '.releases[]? | select(.isPrerelease | not) | [.version, .apiVersion, .runtimeType] | @tsv' "$RELEASES_FILE")
+            elif [ "$HTTP_CODE" == "404" ]; then
+              echo "No releases found for this module"
+            else
+              echo "::warning::Failed to query the developer portal for previous releases (HTTP $HTTP_CODE)"
+            fi
+          fi
+
+          if [ -n "$PREV_VERSION" ]; then
+            echo "Previous release $PREV_VERSION used api $PREV_API on $PREV_RUNTIME"
+            PREV_RUNTIME_NUM=${PREV_RUNTIME#node}
+            if [[ "$PREV_RUNTIME_NUM" =~ ^[0-9]+$ ]] && version_gte "$API_VERSION" "$PREV_API" && [ "$RUNTIME_NUM" -ge "$PREV_RUNTIME_NUM" ]; then
+              echo "::warning::Api $API_VERSION on $RUNTIME_TYPE is below the minimum of api $MIN_API on node$MIN_RUNTIME, but is allowed as a patch release of $PREV_VERSION"
+              exit 0
+            fi
+          fi
+
+          echo "::error::Module uses api $API_VERSION on $RUNTIME_TYPE, which is below the minimum supported of api $MIN_API on node$MIN_RUNTIME. Please upgrade the base library and the runtime.type in companion/manifest.json. (The check can be disabled with the skip-module-api-check input)"
+          exit 99
 
       - name: Upload artifact
         if: ${{ inputs.upload-artifact }}
