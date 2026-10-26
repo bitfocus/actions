@@ -205,7 +205,13 @@ jobs:
       - name: Enforce module-tools version
         shell: bash
         run: |
+          set +e
+          SILENT="--silent"
+          yarn --silent node -e 'process.exit(0);' >/dev/null 2>&1 || {
+            SILENT=""
+          }
           set -e
+
           PKG="@companion-module/tools"
 
           # Resolve the actually-installed version of PKG. We can't just read
@@ -214,8 +220,10 @@ jobs:
           # main entry (always allowed) and walk up to the nearest package.json
           # whose name matches. `yarn node` keeps this working for both the
           # node-modules and Yarn Berry PnP linkers.
+          # --silent is required so yarn doesn't shout about it's own version
+          # on some older yarn versions
           get_version() {
-            yarn node -e '
+            yarn $SILENT node -e '
               const fs = require("fs"), path = require("path");
               const name = process.argv[1];
               let dir = path.dirname(require.resolve(name));
@@ -238,6 +246,10 @@ jobs:
           echo "Installed $PKG version: $INSTALLED"
 
           MAJOR=${INSTALLED%%.*}
+          if [ -z "${MAJOR##*[!0-9]*}" ]; then
+            echo "::error::$PKG major version $MAJOR is not an integer, got installed version $INSTALLED."
+            exit 99
+          fi
           if [ "$MAJOR" -le 2 ]; then
             FLOOR="2.8.0"
           elif [ "$MAJOR" -eq 3 ]; then
