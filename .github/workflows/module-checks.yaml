@@ -82,7 +82,17 @@ jobs:
           # version is preinstalled on the runner, and the module gets built
           # against the wrong runtime without any workflow failure.
           case "$NODE_RUNTIME" in
-            node18) NODE_VERSION="18.x" ;;
+            node18)
+              # node18 is no longer supported. Module repositories must upgrade, but the developer portal
+              # still has to be able to build existing releases, so there it is built with node22 instead
+              if [ "${{ inputs.is-developer-portal }}" != "true" ]; then
+                echo "::error::runtime.type node18 is no longer supported. Please update the runtime.type in companion/manifest.json to node22 or newer."
+                exit 99
+              fi
+              echo "::warning::runtime.type node18 is no longer supported - building with node22 instead"
+              NODE_VERSION="22.x"
+              echo "forced=true" >> $GITHUB_OUTPUT
+              ;;
             node22) NODE_VERSION="22.x" ;;
             node26) NODE_VERSION="26.x" ;;
             *)
@@ -103,6 +113,12 @@ jobs:
         shell: bash
         run: |
           corepack enable
+
+          # Modules built with a forced node version often declare engines.node for their old version, which
+          # yarn classic enforces. Yarn berry doesn't check engines, and errors on the unknown YARN_IGNORE_ENGINES
+          if [ "${{ steps.determine-nodejs.outputs.forced }}" = "true" ] && yarn --version 2>/dev/null | grep -qE '^1\.'; then
+            echo "YARN_IGNORE_ENGINES=true" >> $GITHUB_ENV
+          fi
 
       - name: Check for incorrect lockfiles
         shell: bash
